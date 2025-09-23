@@ -31,10 +31,10 @@ type filterFlags struct {
 	includeAttachments          bool
 	outputCompression           string
 	chunkSize                   int64
+	unchunked                   bool
 }
 
 type filterOpts struct {
-	recover                     bool
 	output                      string
 	includeTopics               []regexp.Regexp
 	excludeTopics               []regexp.Regexp
@@ -45,6 +45,7 @@ type filterOpts struct {
 	includeAttachments          bool
 	compressionFormat           mcap.CompressionFormat
 	chunkSize                   int64
+	unchunked                   bool
 }
 
 // parseDateOrNanos parses a string containing either an RFC3339-formatted date with timezone
@@ -133,6 +134,7 @@ func buildFilterOptions(flags *filterFlags) (*filterOpts, error) {
 	opts.includeLastPerChannelTopics = includeLastPerChannelTopics
 
 	opts.chunkSize = flags.chunkSize
+	opts.unchunked = flags.unchunked
 	return opts, nil
 }
 
@@ -222,7 +224,7 @@ func filter(
 ) error {
 	mcapWriter, err := mcap.NewWriter(w, &mcap.WriterOptions{
 		Compression: opts.compressionFormat,
-		Chunked:     true,
+		Chunked:     !opts.unchunked,
 		ChunkSize:   opts.chunkSize,
 	})
 	if err != nil {
@@ -233,7 +235,6 @@ func filter(
 
 	lexer, err := mcap.NewLexer(r, &mcap.LexerOptions{
 		ValidateChunkCRCs: true,
-		EmitInvalidChunks: opts.recover,
 		AttachmentCallback: func(ar *mcap.AttachmentReader) error {
 			if !opts.includeAttachments {
 				return nil
@@ -269,15 +270,6 @@ func filter(
 			fmt.Fprintf(os.Stderr, "failed to close mcap writer: %v\n", err)
 			return
 		}
-		if opts.recover {
-			fmt.Fprintf(
-				os.Stderr,
-				"Recovered %d messages, %d attachments, and %d metadata records.\n",
-				numMessages,
-				numAttachments,
-				numMetadata,
-			)
-		}
 	}()
 
 	buf := make([]byte, 1024)
@@ -291,17 +283,6 @@ func filter(
 		if err != nil {
 			if errors.Is(err, io.EOF) {
 				return nil
-			}
-			if opts.recover {
-				var expected *mcap.ErrTruncatedRecord
-				if errors.As(err, &expected) {
-					fmt.Println(expected.Error())
-					return nil
-				}
-				if token == mcap.TokenInvalidChunk {
-					fmt.Printf("Invalid chunk encountered, skipping: %s\n", err)
-					continue
-				}
 			}
 			return err
 		}
@@ -488,9 +469,8 @@ usage:
 			[]string{},
 			"messages with topic names matching this regex will be excluded, can be supplied multiple times",
 		)
-		includeLastPerChannelTopics := filterCmd.PersistentFlags().StringArrayP(
-			"last-per-channel-topic-regex",
-			"l",
+		includeLastPerChannelTopics := filterCmd.PersistentFlags().StringArray(
+			"include-last-per-channel-topic-regex",
 			[]string{},
 			"For included topics matching this regex, the most recent message previous to the start time"+
 				" will still be included.",
@@ -576,39 +556,6 @@ usage:
 	}
 
 	{
-		var recoverCmd = &cobra.Command{
-			Use:   "recover [file]",
-			Short: "Recover data from a potentially corrupt MCAP file",
-			Long: `This subcommand reads a potentially corrupt MCAP file and copies data to a new file.
-
-usage:
-  mcap recover in.mcap -o out.mcap`,
-		}
-		output := recoverCmd.PersistentFlags().StringP("output", "o", "", "output filename")
-		chunkSize := recoverCmd.PersistentFlags().Int64P("chunk-size", "", 4*1024*1024, "chunk size of output file")
-		compression := recoverCmd.PersistentFlags().String(
-			"compression",
-			"zstd",
-			"compression algorithm to use on output file",
-		)
-		recoverCmd.Run = func(_ *cobra.Command, args []string) {
-			filterOptions, err := buildFilterOptions(&filterFlags{
-				output:             *output,
-				chunkSize:          *chunkSize,
-				outputCompression:  *compression,
-				includeMetadata:    true,
-				includeAttachments: true,
-			})
-			if err != nil {
-				die("configuration error: %s", err)
-			}
-			filterOptions.recover = true
-			run(filterOptions, args)
-		}
-		rootCmd.AddCommand(recoverCmd)
-	}
-
-	{
 		var compressCmd = &cobra.Command{
 			Use:   "compress [file]",
 			Short: "Create a compressed copy of an MCAP file",
@@ -624,6 +571,7 @@ usage:
 			"zstd",
 			"compression algorithm to use on output file",
 		)
+		unchunked := compressCmd.PersistentFlags().Bool("unchunked", false, "do not chunk the output file")
 		compressCmd.Run = func(_ *cobra.Command, args []string) {
 			filterOptions, err := buildFilterOptions(&filterFlags{
 				output:             *output,
@@ -631,6 +579,7 @@ usage:
 				outputCompression:  *compression,
 				includeMetadata:    true,
 				includeAttachments: true,
+				unchunked:          *unchunked,
 			})
 			if err != nil {
 				die("configuration error: %s", err)

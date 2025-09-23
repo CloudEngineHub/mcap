@@ -11,11 +11,11 @@ jobs:
   spellcheck:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
         with:
           lfs: false
       - run: corepack enable
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v5
         with:
           node-version: 20.x
           cache: yarn
@@ -26,11 +26,11 @@ jobs:
   conformance-lint:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
         with:
           lfs: false
       - run: corepack enable
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v5
         with:
           node-version: 20.x
           cache: yarn
@@ -41,11 +41,11 @@ jobs:
   conformance-cpp:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
         with:
           lfs: true
       - run: corepack enable
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v5
         with:
           node-version: 20.x
           cache: yarn
@@ -61,15 +61,15 @@ jobs:
   conformance-go:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
         with:
           lfs: true
       - run: corepack enable
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v5
         with:
           node-version: 20.x
           cache: yarn
-      - uses: actions/setup-go@v5
+      - uses: actions/setup-go@v6
         with:
           go-version-file: go/go.work
       - run: cd go && make build-conformance-binaries
@@ -80,15 +80,15 @@ jobs:
   conformance-python:
     runs-on: ubuntu-22.04 # required for python 3.8
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
         with:
           lfs: true
       - run: corepack enable
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v5
         with:
           node-version: 20.x
           cache: yarn
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v6
         with:
           python-version: 3.8
       - run: cd python && pip install -e mcap
@@ -99,11 +99,11 @@ jobs:
   conformance-typescript:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
         with:
           lfs: true
       - run: corepack enable
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v5
         with:
           node-version: 20.x
           cache: yarn
@@ -114,11 +114,11 @@ jobs:
   conformance-kaitai-struct:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
         with:
           lfs: true
       - run: corepack enable
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v5
         with:
           node-version: 20.x
           cache: yarn
@@ -129,11 +129,11 @@ jobs:
   conformance-swift:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
         with:
           lfs: true
       - run: corepack enable
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v5
         with:
           node-version: 20.x
           cache: yarn
@@ -148,11 +148,11 @@ jobs:
   conformance-rust:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
         with:
           lfs: true
       - run: corepack enable
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v5
         with:
           node-version: 20.x
           cache: yarn
@@ -172,7 +172,7 @@ jobs:
       run:
         working-directory: cpp
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
         with:
           lfs: false
       - uses: actions/cache@v4
@@ -191,14 +191,14 @@ jobs:
       run:
         working-directory: cpp
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
         with:
           lfs: false
       - uses: actions/cache@v4
         with:
           path: ~/.conan/data
           key: ${{ runner.os }}-${{ hashFiles('cpp/**/conanfile.py') }}
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v6
         with:
           python-version: 3.8
       - run: pip install conan~=1.0
@@ -213,11 +213,11 @@ jobs:
       id-token: write
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
         with:
           lfs: false
       - run: corepack enable
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v5
         with:
           node-version: 20.x
           cache: yarn
@@ -270,11 +270,11 @@ jobs:
   typescript-examples:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
         with:
           lfs: false
       - run: corepack enable
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v5
         with:
           node-version: 20.x
           cache: yarn
@@ -300,10 +300,10 @@ jobs:
     permissions:
       id-token: write
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
         with:
           lfs: true
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v6
         with:
           python-version: 3.8
       - run: pip install pipenv==2023.2.4
@@ -385,10 +385,10 @@ jobs:
       run:
         working-directory: go
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
         with:
           lfs: true
-      - uses: actions/setup-go@v5
+      - uses: actions/setup-go@v6
         with:
           go-version-file: go/go.work
       - name: install golangci-lint
@@ -401,12 +401,11 @@ jobs:
           startsWith(github.ref, 'refs/tags/go/mcap/v')
         run: make -C cli/mcap build && ./check_tag.sh cli/mcap/bin/mcap
 
-  go-release-cli:
+  go-cli:
     permissions:
       contents: write
     needs:
       - go
-    if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/releases/mcap-cli/v')
     defaults:
       run:
         working-directory: go/cli/mcap
@@ -425,6 +424,14 @@ jobs:
             env:
               CC: aarch64-linux-gnu-gcc
               CXX: aarch64-linux-gnu-g++
+          - os: linux
+            image: ubuntu-latest
+            arch: arm
+            setup: sudo apt-get update && sudo apt-get install -qq gcc-arm-linux-gnueabihf
+            env:
+              CC: arm-linux-gnueabihf-gcc
+              CXX: arm-linux-gnueabihf-g++
+              GOARM: 7
           - os: macos
             image: macos-latest
             arch: amd64
@@ -438,16 +445,16 @@ jobs:
             arch: amd64
             env: {}
 
-    name: Build (${{ matrix.os }}/${{ matrix.arch }})
+    name: go-cli (${{ matrix.os }}/${{ matrix.arch }})
     runs-on: ${{ matrix.image }}
     env: ${{ matrix.env }}
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
         with:
           fetch-depth: "0"
       - run: git fetch --depth=1 origin +refs/tags/*:refs/tags/*
-      - uses: actions/setup-go@v5
+      - uses: actions/setup-go@v6
         with:
           go-version-file: go/go.work
       - name: Setup environment
@@ -457,10 +464,17 @@ jobs:
         env:
           GOARCH: ${{ matrix.arch }}
           OUTPUT: mcap-${{ matrix.os }}-${{ matrix.arch }}
+      - uses: actions/upload-artifact@v4
+        with:
+          name: mcap-cli-${{ matrix.os }}-${{ matrix.arch }}
+          path: go/cli/mcap/bin/mcap-${{ matrix.os }}-${{ matrix.arch }}
+          retention-days: 7
       - name: Make release notes
+        if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/releases/mcap-cli/v')
         run: |
           git log --oneline --no-merges --first-parent --grep CLI --decorate-refs=refs $(git describe --tags $(git rev-list --tags=releases/mcap-cli --max-count=1))..HEAD > ${{ github.workspace }}-CHANGELOG.txt
       - name: Release
+        if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/releases/mcap-cli/v')
         uses: softprops/action-gh-release@v2
         with:
           files: ./go/cli/mcap/bin/*
@@ -470,7 +484,7 @@ jobs:
   swift:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
         with:
           lfs: false
       - uses: ./.github/actions/setup-swift
@@ -487,7 +501,7 @@ jobs:
       run:
         working-directory: rust
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
         with:
           lfs: true
       - uses: actions-rs/toolchain@v1

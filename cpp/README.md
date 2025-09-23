@@ -96,6 +96,8 @@ manager can be used with the included
 
 For using MCAP with CMake, the third-party [olympus-robotics/mcap_builder](https://github.com/olympus-robotics/mcap_builder) repository provides a helpful wrapper.
 
+There is also a third party-maintained [vcpkg](https://vcpkg.io/en/) package for [`mcap`](https://vcpkg.io/en/package/mcap), which provides a CMake package.
+
 ### Alternatives
 
 If you use an alternative approach, such as CMake's FetchContent or directly
@@ -108,6 +110,20 @@ Refer to the API documentation in
 [mcap/mcap.hpp](https://github.com/foxglove/mcap/blob/main/cpp/mcap/include/mcap/mcap.hpp)
 for full details. The high-level interfaces for reading and writing are
 `McapReader` and `McapWriter`.
+
+### Visibility
+
+By default, the MCAP library will attempt to export its symbols from the translation unit where
+`MCAP_IMPLEMENTATION` is defined, and import them elsewhere. See `mcap/visibility.hpp` for exact
+semantics. If your application requires something different, you can define the `MCAP_PUBLIC` macro
+before including the library.
+
+```cpp
+// use the MCAP library internally but keep all symbols hidden
+#define MCAP_IMPLEMENTATION
+#define MCAP_PUBLIC __attribute__((visibility("hidden")))
+#include <mcap/writer.hpp>
+```
 
 ## Releasing new versions
 

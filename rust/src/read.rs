@@ -6,7 +6,7 @@
 //! further system calls.
 use std::{
     borrow::Cow,
-    collections::{BTreeMap, HashMap},
+    collections::{hash_map::Entry, BTreeMap, HashMap},
     fmt,
     io::Cursor,
     sync::Arc,
@@ -59,6 +59,7 @@ impl<'a> LinearReader<'a> {
                 buf,
                 reader: SansIoReader::new_with_options(
                     LinearReaderOptions::default()
+                        .with_record_length_limit(buf.len())
                         .with_skip_end_magic(options.contains(Options::IgnoreEndMagic))
                         .with_validate_chunk_crcs(true)
                         .with_emit_chunks(true),
@@ -76,6 +77,7 @@ impl<'a> LinearReader<'a> {
                 buf,
                 reader: SansIoReader::new_with_options(
                     LinearReaderOptions::default()
+                        .with_record_length_limit(buf.len())
                         .with_skip_end_magic(true)
                         .with_skip_start_magic(true),
                 ),
@@ -305,22 +307,29 @@ impl<'a> ChannelAccumulator<'a> {
         if header.id == 0 {
             return Err(McapError::InvalidSchemaId);
         }
-
-        let schema = Arc::new(Schema {
-            id: header.id,
-            name: header.name.clone(),
-            encoding: header.encoding,
-            data,
-        });
-
-        if let Some(preexisting) = self.schemas.insert(header.id, schema.clone()) {
-            // Oh boy, we have this schema already.
-            // It had better be identital.
-            if schema != preexisting {
-                return Err(McapError::ConflictingSchemas(header.name));
+        match self.schemas.entry(header.id) {
+            Entry::Occupied(entry) => {
+                // If we already have this schema, it must be identical.
+                let schema = entry.get();
+                if schema.name == header.name
+                    && schema.encoding == header.encoding
+                    && schema.data == data
+                {
+                    Ok(())
+                } else {
+                    Err(McapError::ConflictingSchemas(header.name))
+                }
+            }
+            Entry::Vacant(entry) => {
+                entry.insert(Arc::new(Schema {
+                    id: header.id,
+                    name: header.name.clone(),
+                    encoding: header.encoding,
+                    data,
+                }));
+                Ok(())
             }
         }
-        Ok(())
     }
 
     pub(crate) fn add_channel(&mut self, chan: records::Channel) -> McapResult<()> {
@@ -336,22 +345,31 @@ impl<'a> ChannelAccumulator<'a> {
                 }
             }
         };
-
-        let channel = Arc::new(Channel {
-            id: chan.id,
-            topic: chan.topic.clone(),
-            schema,
-            message_encoding: chan.message_encoding,
-            metadata: chan.metadata,
-        });
-        if let Some(preexisting) = self.channels.insert(chan.id, channel.clone()) {
-            // Oh boy, we have this channel already.
-            // It had better be identital.
-            if preexisting != channel {
-                return Err(McapError::ConflictingChannels(chan.topic));
+        match self.channels.entry(chan.id) {
+            Entry::Occupied(entry) => {
+                // If we already have this channel, it must be identical.
+                let channel = entry.get();
+                if channel.topic == chan.topic
+                    && channel.schema.as_ref().map(|s| s.id).unwrap_or(0) == chan.schema_id
+                    && channel.message_encoding == chan.message_encoding
+                    && channel.metadata == chan.metadata
+                {
+                    Ok(())
+                } else {
+                    Err(McapError::ConflictingChannels(chan.topic))
+                }
+            }
+            Entry::Vacant(entry) => {
+                entry.insert(Arc::new(Channel {
+                    id: chan.id,
+                    topic: chan.topic.clone(),
+                    schema,
+                    message_encoding: chan.message_encoding,
+                    metadata: chan.metadata,
+                }));
+                Ok(())
             }
         }
-        Ok(())
     }
 
     pub(crate) fn get(&self, chan_id: u16) -> Option<Arc<Channel<'a>>> {
@@ -662,7 +680,7 @@ impl Summary {
         &self,
         mcap: &[u8],
         index: &records::ChunkIndex,
-    ) -> McapResult<HashMap<Arc<Channel>, Vec<records::MessageIndexEntry>>> {
+    ) -> McapResult<HashMap<Arc<Channel<'_>>, Vec<records::MessageIndexEntry>>> {
         if index.message_index_offsets.is_empty() {
             // Message indexing is optional... should we be more descriptive here?
             return Err(McapError::BadIndex);
@@ -722,7 +740,7 @@ impl Summary {
         mcap: &'a [u8],
         index: &records::ChunkIndex,
         message: &records::MessageIndexEntry,
-    ) -> McapResult<Message> {
+    ) -> McapResult<Message<'_>> {
         // Get the chunk (as a header and its data) out of the file at the given offset.
         let end = (index.chunk_start_offset + index.chunk_length) as usize;
         if mcap.len() < end {
