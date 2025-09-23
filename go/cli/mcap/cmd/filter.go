@@ -409,8 +409,6 @@ func filter(
 						}
 						channels[mostRecent.ChannelID] = markableChannel{channel.Channel, true}
 					}
-					mostRecent.LogTime = opts.start
-					mostRecent.PublishTime = opts.start
 					if err := mcapWriter.WriteMessage(mostRecent); err != nil {
 						return err
 					}
@@ -495,7 +493,7 @@ usage:
 			"l",
 			[]string{},
 			"For included topics matching this regex, the most recent message previous to the start time"+
-				" will still be included, with its time adjusted to the start time of the output",
+				" will still be included.",
 		)
 		start := filterCmd.PersistentFlags().StringP(
 			"start",
